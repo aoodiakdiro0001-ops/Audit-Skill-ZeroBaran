@@ -1,0 +1,19 @@
+# مفاتيح بيئة محلية — لا ترفعها أبداً
+.env
+.env.*
+!.env.example
+
+# سجلات ونواتج
+*.log
+report.json
+report.md
+audit-out/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# أنظمة
+.DS_Store
+.idea/
+.vscode/

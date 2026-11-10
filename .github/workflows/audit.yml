@@ -1,0 +1,73 @@
+name: "🛡️ Audit-Skill-ZeroBaran"
+
+# منظومة التدقيق الأمني — تعمل مجاناً بالكامل على GitHub Actions
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  schedule:
+    - cron: "0 3 * * 1"        # تدقيق أسبوعي: الاثنين 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: static-audit + ai-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: جلب الكود
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: تجهيز Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: تثبيت محرّكات الفحص المتقدمة (مجانية)
+        run: pip install --quiet semgrep bandit
+        continue-on-error: true        # المحرّك المدمج يكفي إن فشل التثبيت
+
+      - name: تشغيل التدقيق الكامل
+        id: audit
+        continue-on-error: true        # نرفع التقارير دائماً ثم نُفشل الخطوة لاحقاً
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_TABLE: ${{ secrets.SUPABASE_TABLE }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python -m audit scan . --profile all --format json --out audit-report.json --ai --repo "$GITHUB_REPOSITORY"
+          python -m audit scan . --profile all --format md   --out audit-report.md   --ai --repo "$GITHUB_REPOSITORY" --no-store --no-notify
+
+      - name: نشر التقرير في ملخص المهمة
+        if: always()
+        run: |
+          if [ -f audit-report.md ]; then
+            cat audit-report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: رفع التقرير كأثر (Artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-report
+          path: |
+            audit-report.json
+            audit-report.md
+          retention-days: 90
+
+      - name: كسر البناء عند وجود ثغرة حرجة/عالية
+        if: steps.audit.outcome == 'failure'
+        run: |
+          echo "🛑 ثغرات أمنية تُمنع من الدمج — راجع audit-report.md"
+          exit 1

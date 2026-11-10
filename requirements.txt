@@ -1,0 +1,10 @@
+# Audit-Skill-ZeroBaran — متطلبات اختيارية
+# النظام يعمل بدون أي حزمة خارجية (محرّك قواعد مدمج بالكامل).
+# ثبّت ما تحتاجه فقط:
+
+# تحليل ساكن متقدّم (اختياري)
+semgrep>=1.60.0 ; python_version >= "3.9"
+bandit>=1.7.8 ; python_version >= "3.9"
+
+# فحص حاويات وصور (اختياري، يتطلب ترقيم Trivy من موقعه الرسمي)
+# trivy — يُثبَّت عبر: https://trivy.dev/latest/getting-started/installation/
